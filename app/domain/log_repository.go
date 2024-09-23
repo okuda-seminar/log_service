@@ -1,5 +1,7 @@
 package domain
 
+import "context"
+
 type ILogRepository interface {
-	Save(log *Log) error
+	Save(ctx context.Context, log *Log) error
 }

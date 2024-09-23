@@ -21,3 +21,6 @@ test:
 
 generate:
 	sqlc generate
+
+mock-gen:
+	mockgen -package domain -source=app/domain/log_repository.go -destination=app/domain/log_mock.go
