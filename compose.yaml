@@ -16,6 +16,7 @@ services:
       - 8080:8080
     environment:
       - MYSQL_URL=root:password@tcp(db:3306)/example
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672/
 
     # The commented out section below is an example of how to define a MySQL
     # database that your application can use. `depends_on` tells Docker Compose to
@@ -55,9 +56,17 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - 5672:5672
+      - 15672:15672
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
 
 volumes:
   db-data:
+  rabbitmq_data:
 
 secrets:
   db-password:
