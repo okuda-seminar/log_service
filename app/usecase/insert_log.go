@@ -7,6 +7,10 @@ import (
 	"log_service/app/domain"
 )
 
+type IInsertLogUseCase interface {
+	InsertLog(ctx context.Context, dto *InsertLogDto) error
+}
+
 type InsertLogUseCase struct {
 	logRepository domain.ILogRepository
 }

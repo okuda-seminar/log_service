@@ -2,7 +2,12 @@ package main
 
 import (
 	"log"
+
+	"log_service/app/infrastructure/mysql/db"
+	"log_service/app/infrastructure/mysql/repository"
 	"log_service/app/infrastructure/rabbitmq"
+	"log_service/app/presentation"
+	"log_service/app/usecase"
 )
 
 func main() {
@@ -12,7 +17,17 @@ func main() {
 	}
 	defer ch.Close()
 
+	db, err := db.Connect()
+	if err != nil {
+		log.Fatalf("Failed to connect to database: %v", err)
+	}
+	defer db.Close()
+
+	logRepo := repository.NewLogRepository(db)
+	logUseCase := usecase.NewInsertLogUseCase(logRepo)
+	amqpLogHandler := presentation.NewAMQPLogHandler(logUseCase)
+
 	for msg := range msgs {
-		log.Printf("Received message: %s", msg.Body)
+		amqpLogHandler.HandleLog(msg)
 	}
 }
