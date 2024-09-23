@@ -14,6 +14,8 @@ services:
       target: final
     ports:
       - 8080:8080
+    environment:
+      - MYSQL_URL=root:password@tcp(db:3306)/example
 
     # The commented out section below is an example of how to define a MySQL
     # database that your application can use. `depends_on` tells Docker Compose to
