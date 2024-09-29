@@ -4,3 +4,9 @@ INSERT INTO logs (
 ) VALUES (
   ?, ?, ?, ?, ?, ?
 );
+
+-- name: ListLogs :many
+SELECT
+  log_level, date, destination_service, source_service, request_type, content
+FROM logs
+;

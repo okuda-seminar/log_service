@@ -28,3 +28,24 @@ func (r *LogRepository) Save(ctx context.Context, log *domain.Log) error {
 	})
 	return err
 }
+
+func (r *LogRepository) List(ctx context.Context) ([]domain.Log, error) {
+	logs, err := dbgen.New(r.db).ListLogs(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	var result []domain.Log
+	for _, log := range logs {
+		result = append(result, domain.Log{
+			LogLevel:           log.LogLevel,
+			Date:               log.Date,
+			DestinationService: log.DestinationService,
+			SourceService:      log.SourceService,
+			RequestType:        log.RequestType,
+			Content:            log.Content,
+		})
+	}
+
+	return result, nil
+}
