@@ -24,3 +24,4 @@ generate:
 
 mock-gen:
 	mockgen -package domain -source=app/domain/log_repository.go -destination=app/domain/log_mock.go
+	mockgen -package usecase -source=app/usecase/insert_log.go -destination=app/usecase/insert_log_mock.go
