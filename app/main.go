@@ -2,20 +2,17 @@ package main
 
 import (
 	"log"
-	"log_service/app/infrastructure/mysql/db"
-	"net/http"
+	"log_service/app/infrastructure/rabbitmq"
 )
 
 func main() {
-	db, err := db.Connect()
+	ch, msgs, err := rabbitmq.Connect()
 	if err != nil {
-		log.Fatalf("db.Connect: %v", err)
+		log.Fatalf("Failed to connect to RabbitMQ: %v", err)
 	}
-	log.Println("db connected")
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		if err := db.Ping(); err != nil {
-			log.Fatalf("db.Ping: %v", err)
-		}
-	})
-	log.Fatalf("http.ListenAndServe: %v", http.ListenAndServe(":8080", nil))
+	defer ch.Close()
+
+	for msg := range msgs {
+		log.Printf("Received message: %s", msg.Body)
+	}
 }
