@@ -6,7 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/streadway/amqp"
+	amqp "github.com/rabbitmq/amqp091-go"
+
 	"go.uber.org/mock/gomock"
 
 	"log_service/app/usecase"
