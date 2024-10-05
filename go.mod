@@ -5,8 +5,8 @@ go 1.23.0
 require (
 	github.com/go-sql-driver/mysql v1.8.1
 	github.com/ory/dockertest v3.3.5+incompatible
+	github.com/rabbitmq/amqp091-go v1.10.0
 	github.com/sqldef/sqldef v0.17.19
-	github.com/streadway/amqp v1.1.0
 	go.uber.org/mock v0.4.0
 )
 
@@ -19,7 +19,6 @@ require (
 	github.com/containerd/continuity v0.4.3 // indirect
 	github.com/docker/go-connections v0.5.0 // indirect
 	github.com/docker/go-units v0.5.0 // indirect
-	github.com/golang/mock v1.6.0 // indirect
 	github.com/gotestyourself/gotestyourself v2.2.0+incompatible // indirect
 	github.com/k0kubun/pp/v3 v3.2.0 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
