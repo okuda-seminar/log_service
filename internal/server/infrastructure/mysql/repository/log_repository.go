@@ -3,8 +3,9 @@ package repository
 import (
 	"context"
 	"database/sql"
-	"log_service/app/domain"
-	"log_service/app/infrastructure/mysql/db/dbgen"
+
+	"log_service/internal/server/domain"
+	"log_service/internal/server/infrastructure/mysql/db/dbgen"
 )
 
 type LogRepository struct {

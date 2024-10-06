@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"log_service/app/domain"
+	"log_service/internal/server/domain"
 )
 
 type IInsertLogUseCase interface {
