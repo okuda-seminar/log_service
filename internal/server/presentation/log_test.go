@@ -10,7 +10,7 @@ import (
 
 	"go.uber.org/mock/gomock"
 
-	"log_service/app/usecase"
+	"log_service/internal/server/usecase"
 )
 
 func TestNewAMQPLogHandler(t *testing.T) {

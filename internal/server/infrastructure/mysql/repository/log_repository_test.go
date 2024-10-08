@@ -2,11 +2,11 @@ package repository
 
 import (
 	"context"
-	"log_service/app/domain"
 	"testing"
 	"time"
-)
 
+	"log_service/internal/server/domain"
+)
 
 func TestInsertLog(t *testing.T) {
 	repo := NewLogRepository(dbConnTest)
@@ -23,7 +23,6 @@ func TestInsertLog(t *testing.T) {
 	}
 }
 
-
 // TODO: https://github.com/okuda-seminar/log_service/issues/18#issue-2557594866
 // - [Server] Improve Test Cleanup Phase to Ensure Proper Test Isolation
 func TestList(t *testing.T) {
@@ -36,7 +35,7 @@ func TestList(t *testing.T) {
 		RequestType:        "POST",
 		Content:            "Test Get Log.",
 	})
-	results , err := repo.List(context.Background())
+	results, err := repo.List(context.Background())
 	if err != nil {
 		t.Error(err)
 	}

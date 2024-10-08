@@ -2,11 +2,12 @@ package usecase
 
 import (
 	"context"
-	"log_service/app/domain"
 	"testing"
 	"time"
 
 	"go.uber.org/mock/gomock"
+
+	"log_service/internal/server/domain"
 )
 
 func TestInsertLog(t *testing.T) {

@@ -8,7 +8,7 @@ import (
 
 	amqp "github.com/rabbitmq/amqp091-go"
 
-	"log_service/app/usecase"
+	"log_service/internal/server/usecase"
 )
 
 type AMQPLogHandler struct {

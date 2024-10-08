@@ -7,11 +7,11 @@ import (
 	"syscall"
 	"time"
 
-	"log_service/app/infrastructure/mysql/db"
-	"log_service/app/infrastructure/mysql/repository"
-	"log_service/app/infrastructure/rabbitmq"
-	"log_service/app/presentation"
-	"log_service/app/usecase"
+	"log_service/internal/server/infrastructure/mysql/db"
+	"log_service/internal/server/infrastructure/mysql/repository"
+	"log_service/internal/server/infrastructure/rabbitmq"
+	"log_service/internal/server/presentation"
+	"log_service/internal/server/usecase"
 )
 
 func main() {
