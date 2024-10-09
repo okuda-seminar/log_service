@@ -29,7 +29,8 @@ generate: docker-generate-mock
 mock-gen: docker-generate-mock
 	docker run --rm -v $(PWD):/app ${GENERATE_IMAGE} sh -c \
 	"mockgen -package domain -source=internal/server/domain/log_repository.go -destination=internal/server/domain/log_mock.go && \
-	mockgen -package usecase -source=internal/server/usecase/insert_log.go -destination=internal/server/usecase/insert_log_mock.go"
+	mockgen -package usecase -source=internal/server/usecase/insert_log.go -destination=internal/server/usecase/insert_log_mock.go \
+	mockgen -package usecase -source=internal/server/usecase/list_log.go -destination=internal/server/usecase/list_log_mock.go"
 
 docker-generate-mock:
 	docker build -f Dockerfile.generate -t ${GENERATE_IMAGE} .
