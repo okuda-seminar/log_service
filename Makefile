@@ -1,5 +1,6 @@
 include .env
 export $(shell sed 's/=.*//' .env)
+GENERATE_IMAGE ?= generate-mock
 
 up:
 	docker compose up -d
@@ -20,9 +21,13 @@ test:
 	go test -cover ./... -coverprofile=cover.out
 	go tool cover -html=cover.out
 
-generate:
-	sqlc generate
+generate: docker-generate-mock
+	docker run --rm -v $(PWD):/app ${GENERATE_IMAGE} sh -c "sqlc generate"
 
-mock-gen:
-	mockgen -package domain -source=internal/server/domain/log_repository.go -destination=internal/server/domain/log_mock.go
-	mockgen -package usecase -source=internal/server/usecase/insert_log.go -destination=internal/server/usecase/insert_log_mock.go
+mock-gen: docker-generate-mock
+	docker run --rm -v $(PWD):/app ${GENERATE_IMAGE} sh -c \
+	"mockgen -package domain -source=internal/server/domain/log_repository.go -destination=internal/server/domain/log_mock.go && \
+	mockgen -package usecase -source=internal/server/usecase/insert_log.go -destination=internal/server/usecase/insert_log_mock.go"
+
+docker-generate-mock:
+	docker build -f Dockerfile.generate -t ${GENERATE_IMAGE} .
