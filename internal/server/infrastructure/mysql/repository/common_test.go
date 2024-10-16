@@ -4,7 +4,7 @@ import (
 	"database/sql"
 	"testing"
 
-	dbTest "log_service/internal/app/infrastructure/mysql/db/db_test"
+	dbTest "log_service/internal/server/infrastructure/mysql/db/db_test"
 )
 
 var (

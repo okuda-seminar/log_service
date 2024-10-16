@@ -2,6 +2,8 @@ include .env
 export $(shell sed 's/=.*//' .env)
 GENERATE_IMAGE ?= generate-mock
 
+ARGS ?= --log-level=debug --source-service=client --destination-service=server --request-type=POST --content="Hello World!"
+
 up:
 	docker compose up -d
 
@@ -31,3 +33,6 @@ mock-gen: docker-generate-mock
 
 docker-generate-mock:
 	docker build -f Dockerfile.generate -t ${GENERATE_IMAGE} .
+	
+send_message:
+	RABBITMQ_URL=amqp://guest:guest@localhost:5672/ go run ./cmd/client $(ARGS)
