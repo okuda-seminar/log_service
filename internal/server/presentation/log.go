@@ -5,6 +5,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
+	"net/http"
 
 	amqp "github.com/rabbitmq/amqp091-go"
 
@@ -17,10 +19,20 @@ type AMQPLogHandler struct {
 	Channel    *amqp.Channel
 }
 
+type HttpLogHandler struct {
+	ListUseCase usecase.IListLogsUseCase
+}
+
 func NewAMQPLogHandler(logUseCase usecase.IInsertLogUseCase, ch *amqp.Channel) *AMQPLogHandler {
 	return &AMQPLogHandler{
 		LogUseCase: logUseCase,
 		Channel:    ch,
+	}
+}
+
+func NewHttpLogHandler(listUseCase usecase.IListLogsUseCase) *HttpLogHandler {
+	return &HttpLogHandler{
+		ListUseCase: listUseCase,
 	}
 }
 
@@ -80,4 +92,35 @@ func (h *AMQPLogHandler) SendResponse(statusCode int, message, key, corrID strin
 	if err != nil {
 		panic(err)
 	}
+}
+
+func (h *HttpLogHandler) HandleLogList(w http.ResponseWriter, r *http.Request) {
+	logs, err := h.ListUseCase.ListLogs(r.Context())
+	if err != nil {
+		log.Printf("Failed to list logs: %v", err)
+		http.Error(w, fmt.Sprintf("Internal Server Error: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	responseLogs := make([]HttpLogListResponse, len(logs))
+	for i, eachLog := range logs {
+		responseLogs[i] = HttpLogListResponse{
+			LogLevel:           eachLog.LogLevel,
+			Date:               eachLog.Date,
+			DestinationService: eachLog.DestinationService,
+			SourceService:      eachLog.SourceService,
+			RequestType:        eachLog.RequestType,
+			Content:            eachLog.Content,
+		}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+
+	if err := json.NewEncoder(w).Encode(responseLogs); err != nil {
+		log.Printf("Failed to encode logs: %v", err)
+		http.Error(w, fmt.Sprintf("Internal Server Error: %v", err), http.StatusInternalServerError)
+		return
+	}
+
 }
