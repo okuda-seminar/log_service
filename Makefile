@@ -20,7 +20,7 @@ exec_db:
 	docker compose exec db mysql -u root -p$(MYSQL_ROOT_PASSWORD) ${MYSQL_DATABASE}
 
 test:
-	go test -cover ./... -coverprofile=cover.out
+	go test -cover ./... -gcflags="all=-N -l" -v -coverprofile=cover.out
 	go tool cover -html=cover.out
 
 generate: docker-generate-mock
@@ -34,6 +34,6 @@ mock-gen: docker-generate-mock
 
 docker-generate-mock:
 	docker build -f Dockerfile.generate -t ${GENERATE_IMAGE} .
-	
+
 send_message:
 	RABBITMQ_URL=amqp://guest:guest@localhost:5672/ go run ./cmd/client $(ARGS)
