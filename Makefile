@@ -5,7 +5,7 @@ GENERATE_IMAGE ?= generate-mock
 ARGS ?= --log-level=debug --source-service=client --destination-service=server --request-type=POST --content="Hello World!"
 
 up:
-	docker compose up -d
+	docker compose up -d --build
 
 down:
 	docker compose down -v --remove-orphans

@@ -5,8 +5,6 @@ import (
 	"os"
 
 	amqp "github.com/rabbitmq/amqp091-go"
-
-	"log_service/internal/server/infrastructure/rabbitmq"
 )
 
 func Connect() (*amqp.Connection, *amqp.Channel, error) {
@@ -22,21 +20,4 @@ func Connect() (*amqp.Connection, *amqp.Channel, error) {
 	}
 
 	return conn, ch, nil
-}
-
-func Publish(ch *amqp.Channel, input []byte) error {
-	err := ch.Publish(
-		"",                  // exchange
-		rabbitmq.QUEUE_NAME, // routing key
-		false,               // mandatory
-		false,               // immediate
-		amqp.Publishing{
-			ContentType: "text/plain",
-			Body:        []byte(input),
-		})
-	if err != nil {
-		log.Fatalf("Failed to publish a message: %v", err)
-		return err
-	}
-	return nil
 }
