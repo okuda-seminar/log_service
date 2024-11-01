@@ -27,7 +27,6 @@ func main() {
 
 	logRepo := repository.NewLogRepository(db)
 	logUseCase := usecase.NewInsertLogUseCase(logRepo)
-	amqpLogHandler := presentation.NewAMQPLogHandler(logUseCase)
 
 	amqpConn, ch, msgs, err := rabbitmq.Connect()
 	if err != nil {
@@ -37,11 +36,12 @@ func main() {
 	defer amqpConn.Close()
 	defer ch.Close()
 
+	amqpLogHandler := presentation.NewAMQPLogHandler(logUseCase, ch)
+
 	done := make(chan bool)
 	go func() {
 		for d := range msgs {
 			amqpLogHandler.HandleLog(d)
-			log.Printf("Received a message: %s", d.Body)
 			if err := d.Ack(false); err != nil {
 				log.Fatalf("Failed to ack message: %v", err)
 			}

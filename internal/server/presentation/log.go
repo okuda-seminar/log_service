@@ -4,27 +4,30 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"log"
+	"fmt"
 
 	amqp "github.com/rabbitmq/amqp091-go"
 
 	"log_service/internal/server/usecase"
+	"log_service/internal/utils"
 )
 
 type AMQPLogHandler struct {
 	LogUseCase usecase.IInsertLogUseCase
+	Channel    *amqp.Channel
 }
 
-func NewAMQPLogHandler(logUseCase usecase.IInsertLogUseCase) *AMQPLogHandler {
+func NewAMQPLogHandler(logUseCase usecase.IInsertLogUseCase, ch *amqp.Channel) *AMQPLogHandler {
 	return &AMQPLogHandler{
 		LogUseCase: logUseCase,
+		Channel:    ch,
 	}
 }
 
 func (h *AMQPLogHandler) HandleLog(msg amqp.Delivery) {
 	req, err := ParseAMQPLog(msg)
 	if err != nil {
-		log.Printf("Failed to parse log request: %v", err)
+		h.SendResponse(utils.INVALID_ARGUMENT, fmt.Sprintf("Failed to parse log request: %v", err), msg.ReplyTo)
 		return
 	}
 	logDto := &usecase.InsertLogDto{
@@ -37,10 +40,11 @@ func (h *AMQPLogHandler) HandleLog(msg amqp.Delivery) {
 	}
 	err = h.LogUseCase.InsertLog(context.Background(), logDto)
 	if err != nil {
-		log.Printf("Failed to insert log: %v", err)
+		h.SendResponse(utils.INTERNAL, fmt.Sprintf("Failed to insert log: %v", err), msg.ReplyTo)
 		return
 	}
-	log.Printf("Received message: %s", msg.Body)
+
+	h.SendResponse(utils.OK, "OK", msg.ReplyTo)
 }
 
 func ParseAMQPLog(msg amqp.Delivery) (AMQPLogRequest, error) {
@@ -49,8 +53,27 @@ func ParseAMQPLog(msg amqp.Delivery) (AMQPLogRequest, error) {
 	decoder := json.NewDecoder(bytes.NewReader(msg.Body))
 	err := decoder.Decode(&req)
 	if err != nil {
-		log.Printf("Failed to parse log request: %v", err)
 		return req, err
 	}
 	return req, nil
+}
+
+func (h *AMQPLogHandler) SendResponse(statusCode int, message string, key string) {
+	res := &AmqpLogResponse{
+		StatusCode: statusCode,
+		Message:    message,
+	}
+	bytes, err := json.Marshal(res)
+	if err != nil {
+		panic(err)
+	}
+	err = h.Channel.Publish(
+		"",    // exchange
+		key,   // routing key
+		false, // mandatory
+		false, // immediate
+		amqp.Publishing{Body: bytes})
+	if err != nil {
+		panic(err)
+	}
 }
