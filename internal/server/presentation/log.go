@@ -27,7 +27,7 @@ func NewAMQPLogHandler(logUseCase usecase.IInsertLogUseCase, ch *amqp.Channel) *
 func (h *AMQPLogHandler) HandleLog(msg amqp.Delivery) {
 	req, err := ParseAMQPLog(msg)
 	if err != nil {
-		h.SendResponse(utils.INVALID_ARGUMENT, fmt.Sprintf("Failed to parse log request: %v", err), msg.ReplyTo)
+		h.SendResponse(utils.INVALID_ARGUMENT, fmt.Sprintf("Failed to parse log request: %v", err), msg.ReplyTo, msg.CorrelationId)
 		return
 	}
 	logDto := &usecase.InsertLogDto{
@@ -40,11 +40,11 @@ func (h *AMQPLogHandler) HandleLog(msg amqp.Delivery) {
 	}
 	err = h.LogUseCase.InsertLog(context.Background(), logDto)
 	if err != nil {
-		h.SendResponse(utils.INTERNAL, fmt.Sprintf("Failed to insert log: %v", err), msg.ReplyTo)
+		h.SendResponse(utils.INTERNAL, fmt.Sprintf("Failed to insert log: %v", err), msg.ReplyTo, msg.CorrelationId)
 		return
 	}
 
-	h.SendResponse(utils.OK, "OK", msg.ReplyTo)
+	h.SendResponse(utils.OK, "OK", msg.ReplyTo, msg.CorrelationId)
 }
 
 func ParseAMQPLog(msg amqp.Delivery) (AMQPLogRequest, error) {
@@ -58,7 +58,7 @@ func ParseAMQPLog(msg amqp.Delivery) (AMQPLogRequest, error) {
 	return req, nil
 }
 
-func (h *AMQPLogHandler) SendResponse(statusCode int, message string, key string) {
+func (h *AMQPLogHandler) SendResponse(statusCode int, message, key, corrID string) {
 	res := &AmqpLogResponse{
 		StatusCode: statusCode,
 		Message:    message,
@@ -72,7 +72,11 @@ func (h *AMQPLogHandler) SendResponse(statusCode int, message string, key string
 		key,   // routing key
 		false, // mandatory
 		false, // immediate
-		amqp.Publishing{Body: bytes})
+		amqp.Publishing{
+			ContentType:   "text/plain",
+			CorrelationId: corrID,
+			Body:          bytes,
+		})
 	if err != nil {
 		panic(err)
 	}
