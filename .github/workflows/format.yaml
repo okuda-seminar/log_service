@@ -43,3 +43,6 @@ jobs:
               repo: context.repo.repo,
               body: output
             })
+      - name: Fail job if format errors exist
+        if: steps.format.outcome == 'failure'
+        run: exit 1
