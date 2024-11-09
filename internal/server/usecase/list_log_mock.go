@@ -6,7 +6,6 @@ package usecase
 
 import (
 	context "context"
-	domain "log_service/internal/server/domain"
 	reflect "reflect"
 
 	gomock "go.uber.org/mock/gomock"
@@ -36,10 +35,10 @@ func (m *MockIListLogsUseCase) EXPECT() *MockIListLogsUseCaseMockRecorder {
 }
 
 // ListLogs mocks base method.
-func (m *MockIListLogsUseCase) ListLogs(ctx context.Context) ([]*domain.Log, error) {
+func (m *MockIListLogsUseCase) ListLogs(ctx context.Context) ([]*ListLogDto, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ListLogs", ctx)
-	ret0, _ := ret[0].([]*domain.Log)
+	ret0, _ := ret[0].([]*ListLogDto)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
