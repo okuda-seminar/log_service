@@ -22,4 +22,3 @@ func Connect() (*sql.DB, error) {
 	}
 	return nil, fmt.Errorf("could not connect to database")
 }
-

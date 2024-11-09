@@ -318,5 +318,4 @@ func TestHandleLogList(t *testing.T) {
 			t.Errorf("handler returned unexpected error message: got %v want %v", errorWriter.body, expected)
 		}
 	})
-
 }
