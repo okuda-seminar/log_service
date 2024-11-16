@@ -2,7 +2,6 @@ package main
 
 import (
 	"log"
-
 	"log_service/internal/server"
 )
 

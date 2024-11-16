@@ -25,11 +25,19 @@ func BuildLogContainer() (*dig.Container, error) {
 		return nil, err
 	}
 
+	if err := container.Provide(usecase.NewListLogsUseCase, dig.As(new(usecase.IListLogsUseCase))); err != nil {
+		return nil, err
+	}
+
 	if err := container.Provide(rabbitmq.Connect); err != nil {
 		return nil, err
 	}
 
 	if err := container.Provide(presentation.NewAMQPLogHandler); err != nil {
+		return nil, err
+	}
+
+	if err := container.Provide(presentation.NewHttpLogHandler); err != nil {
 		return nil, err
 	}
 

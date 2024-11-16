@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"log"
+	"net/http"
 	"os/signal"
 	"syscall"
 	"time"
@@ -31,6 +32,7 @@ func Run() error {
 		amqpCh *amqp091.Channel,
 		amqpMsgs <-chan amqp091.Delivery,
 		amqpLogHandler *presentation.AMQPLogHandler,
+		httpLogHander *presentation.HttpLogHandler,
 	) {
 		defer dbConn.Close()
 		defer amqpCh.Close()
@@ -45,6 +47,21 @@ func Run() error {
 				}
 			}
 			done <- true
+		}()
+
+		mux := http.NewServeMux()
+		mux.HandleFunc("/logs", httpLogHander.HandleLogList)
+
+		srv := &http.Server{
+			Addr:    ":8080",
+			Handler: mux,
+		}
+
+		go func() {
+			log.Printf("HTTP server is running on %s", srv.Addr)
+			if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+				log.Fatalf("Failed to start server: %v", err)
+			}
 		}()
 
 		log.Printf("Waiting for messages. To exit press CTRL^C")
@@ -62,6 +79,14 @@ func Run() error {
 			log.Fatalf("Failed to close channel: %v", err)
 		}
 
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+
+		if err := srv.Shutdown(shutdownCtx); err != nil {
+			log.Fatalf("HTTP server Shutdown: %v", err)
+		}
+		log.Println("HTTP server gracefully stopped")
+
 		select {
 		case <-done:
 			log.Println("finished processing all jobs")
@@ -69,6 +94,7 @@ func Run() error {
 			log.Println("timed out waiting for jobs to finish")
 		}
 	})
+
 	if err != nil {
 		return err
 	}
