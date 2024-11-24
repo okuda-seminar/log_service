@@ -3,7 +3,6 @@ package presentation
 import (
 	"context"
 	"encoding/json"
-	"log"
 
 	amqp "github.com/rabbitmq/amqp091-go"
 
@@ -12,24 +11,22 @@ import (
 )
 
 type ILogPresentation interface {
-	Publish(ctx context.Context, queueName string, req presentation.AMQPLogRequest) error
+	Publish(ctx context.Context, queueName string, id string, req presentation.AMQPLogRequest) error
 	Consume() (<-chan amqp.Delivery, string, error)
-	Serve(msgs <-chan amqp.Delivery) error
+	Serve(msgs <-chan amqp.Delivery, id string) error
 }
 
 type LogPresentation struct {
 	ch *amqp.Channel
-	id string
 }
 
-func NewLogPresentation(ch *amqp.Channel, id string) *LogPresentation {
+func NewLogPresentation(ch *amqp.Channel) *LogPresentation {
 	return &LogPresentation{
 		ch: ch,
-		id: id,
 	}
 }
 
-func (r *LogPresentation) Publish(ctx context.Context, queueName string, req presentation.AMQPLogRequest) error {
+func (r *LogPresentation) Publish(ctx context.Context, queueName string, id string, req presentation.AMQPLogRequest) error {
 	bytes, err := json.Marshal(req)
 	if err != nil {
 		return err
@@ -42,7 +39,7 @@ func (r *LogPresentation) Publish(ctx context.Context, queueName string, req pre
 		amqp.Publishing{
 			ContentType:   "text/plain",
 			ReplyTo:       queueName,
-			CorrelationId: r.id,
+			CorrelationId: id,
 			Body:          bytes,
 		})
 	if err != nil {
@@ -78,18 +75,13 @@ func (r *LogPresentation) Consume() (<-chan amqp.Delivery, string, error) {
 	return msgs, q.Name, nil
 }
 
-func (r *LogPresentation) Serve(msgs <-chan amqp.Delivery) error {
+func (r *LogPresentation) Serve(msgs <-chan amqp.Delivery, id string) error {
 	for d := range msgs {
-		if d.CorrelationId == r.id {
+		if d.CorrelationId == id {
 			res := &presentation.AmqpLogResponse{}
 			if err := json.Unmarshal(d.Body, res); err != nil {
 				return err
 			}
-			log.Printf(
-				"Received response: code: %d, message: %v",
-				res.StatusCode,
-				res.Message,
-			)
 			break
 		}
 	}
