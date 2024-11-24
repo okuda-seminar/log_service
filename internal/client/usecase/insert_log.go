@@ -4,6 +4,8 @@ import (
 	"context"
 	"time"
 
+	"github.com/google/uuid"
+
 	clientPresentation "log_service/internal/client/presentation"
 	"log_service/internal/server/presentation"
 )
@@ -31,9 +33,11 @@ func (u *InsertLogUseCase) Serve(req presentation.AMQPLogRequest) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	if err := u.logPresentation.Publish(ctx, qName, req); err != nil {
+	corrID := uuid.New().String()
+
+	if err := u.logPresentation.Publish(ctx, qName, corrID, req); err != nil {
 		return err
 	}
 
-	return u.logPresentation.Serve(msgs)
+	return u.logPresentation.Serve(msgs, corrID)
 }
