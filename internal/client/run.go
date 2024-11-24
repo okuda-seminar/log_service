@@ -1,8 +1,6 @@
 package client
 
 import (
-	"github.com/google/uuid"
-
 	"log_service/internal/client/infrastructure/rabbitmq"
 	clientPresentation "log_service/internal/client/presentation"
 	"log_service/internal/client/usecase"
@@ -17,9 +15,7 @@ func Run(req presentation.AMQPLogRequest) error {
 	defer conn.Close()
 	defer ch.Close()
 
-	corrID := uuid.New().String()
-
-	logPresentation := clientPresentation.NewLogPresentation(ch, corrID)
+	logPresentation := clientPresentation.NewLogPresentation(ch)
 	logUseCase := usecase.NewInsertLogUseCase(logPresentation)
 
 	return logUseCase.Serve(req)
