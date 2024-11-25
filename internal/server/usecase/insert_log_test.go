@@ -11,15 +11,13 @@ import (
 )
 
 func TestInsertLog(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	mockUserRepo := domain.NewMockILogRepository(ctrl)
-	logInsertUseCase := NewInsertLogUseCase(mockUserRepo)
+	t.Parallel()
 
 	currTime := time.Now()
 	tests := []struct {
 		name     string
 		dto      *InsertLogDto
-		mockFunc func()
+		mockFunc func(*domain.MockILogRepository)
 	}{
 		{
 			name: "success",
@@ -31,8 +29,8 @@ func TestInsertLog(t *testing.T) {
 				RequestType:        "POST",
 				Content:            "User created successfully.",
 			},
-			mockFunc: func() {
-				mockUserRepo.EXPECT().Save(
+			mockFunc: func(m *domain.MockILogRepository) {
+				m.EXPECT().Save(
 					gomock.Any(),
 					&domain.Log{
 						LogLevel:           "INFO",
@@ -49,8 +47,12 @@ func TestInsertLog(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			ctrl := gomock.NewController(t)
+			mockUserRepo := domain.NewMockILogRepository(ctrl)
+			logInsertUseCase := NewInsertLogUseCase(mockUserRepo)
 			ctx := context.Background()
-			tt.mockFunc()
+			tt.mockFunc(mockUserRepo)
 			err := logInsertUseCase.InsertLog(ctx, tt.dto)
 			if err != nil {
 				t.Errorf("InsertLog() error = %v", err)
