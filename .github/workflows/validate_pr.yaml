@@ -1,0 +1,206 @@
+name: PR and Commit Title Check
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize]
+
+jobs:
+  check_title:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Install Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: "14"
+
+      - name: Install js-yaml
+        run: npm install js-yaml
+
+      - name: Check PR title whether it doesn't end with a period
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{secrets.GITHUB_TOKEN}}
+          script: |
+            const title = context.payload.pull_request.title;
+            console.log(`PR title: ${title}`);
+            if (title.endsWith('.')) {
+              console.log("PR title ends with a period. Removing the period.");
+              github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: "PR title ends with a period. Removing the period."
+              });
+              core.setFailed("The title ends with a period, which is not allowed.");
+            }
+
+      - name: Check PR title whether it matches the allowed prefix
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{secrets.GITHUB_TOKEN}}
+          script: |
+            const fs = require('fs');
+            const yaml = require('js-yaml');
+            const title = context.payload.pull_request.title;
+            let data;
+            try {
+              const fileContents = fs.readFileSync('hack/prefix.yaml', 'utf8');
+              data = yaml.load(fileContents);
+            } catch (e) {
+              console.log(`Error reading or parsing config.yml: ${e.message}`);
+              throw e;
+            }
+            const prefix = data['allow-prefix'];
+            if (prefix) {
+              let matches = false;
+              for (let i = 0; i < prefix.length; i++) {
+                if (title.startsWith(prefix[i])) {
+                  console.log("Title matches the allowed prefix.");
+                  matches = true;
+                  break;
+                }
+              }
+              if (!matches) {
+                console.log("Title does not match any allowed prefix. Creating a comment.");
+                github.rest.issues.createComment({
+                  issue_number: context.issue.number,
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  body: `You should add the correct prefix to the PR title. Allowed prefixes: ${prefix}.`
+                });
+                core.setFailed("The title does not match any allowed prefix, which is not allowed.");
+              }
+            }
+
+      - name: Check the number of commits in the PR
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{secrets.GITHUB_TOKEN}}
+          script: |
+            const response = await github.rest.pulls.listCommits({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.issue.number
+            });
+            const commitCount = response.data.length;
+            if (commitCount !== 1) {
+              github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: `Expected one commit, but found ${commitCount}.`
+              });
+              core.setFailed("The number of commits in the PR is not 1, which is not allowed.");
+            }
+      - name: Check commit title whether it end with a period
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{secrets.GITHUB_TOKEN}}
+          script: |
+            const response = await github.rest.pulls.listCommits({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.issue.number
+            });
+            const commit = response.data[0];
+            const title = commit.commit.message;
+            console.log(`Commit title: ${title}`);
+            if (!title.endsWith('.')) {
+              console.log("Commit title does not end with a period. Adding a period.");
+              github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: "Commit title does not end with a period. Adding the period."
+              });
+              core.setFailed("The title doesn't end with a period, which is not allowed.");
+            }
+
+      - name: Check commit title whether it matches the allowed prefix
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{secrets.GITHUB_TOKEN}}
+          script: |
+            const fs = require('fs');
+            const yaml = require('js-yaml');
+            const response = await github.rest.pulls.listCommits({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.issue.number
+            });
+            const commit = response.data[0];
+            const title = commit.commit.message;
+            let data;
+            try {
+              const fileContents = fs.readFileSync('hack/prefix.yaml', 'utf8');
+              data = yaml.load(fileContents);
+            } catch (e) {
+              console.log(`Error reading or parsing config.yml: ${e.message}`);
+              throw e;
+            }
+            const prefix = data['allow-prefix'];
+            if (prefix) {
+              let matches = false;
+              for (let i = 0; i < prefix.length; i++) {
+                if (title.startsWith(prefix[i])) {
+                  console.log("Title matches the allowed prefix.");
+                  matches = true;
+                  break;
+                }
+              }
+              if (!matches) {
+                console.log("Title does not match any allowed prefix. Creating a comment.");
+                github.rest.issues.createComment({
+                  issue_number: context.issue.number,
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  body: `You should add the correct prefix to the commit title. Allowed prefixes: ${prefix}.`
+                });
+                core.setFailed("The title does not match any allowed prefix, which is not allowed.");
+              }
+            }
+
+      - name: Check the valid commit title format
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{secrets.GITHUB_TOKEN}}
+          script: |
+            const response = await github.rest.pulls.listCommits({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.issue.number
+            });
+            const commit = response.data[0];
+            const commitMessage = commit.commit.message;
+            const prTitle = context.payload.pull_request.title;
+
+            // Escape special characters for regex
+            const escapedTitle = prTitle.replace(/[\[\].*^$/\\]/g, '\\$&');
+            const pattern = new RegExp(`^${escapedTitle}.*\\.$`);
+
+            // Check if the commit message matches the pattern
+            if (!pattern.test(commitMessage.trim())) {
+              github.rest.issues.createComment({
+                  issue_number: context.issue.number,
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  body: `Commit message does not start with '${prTitle}' and end with a period.`
+                });
+              core.setFailed(`${commitMessage.trim()} does not start with '${prTitle}' and end with a period.`);
+            }
+
+      - name: Notify all test passed
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{secrets.GITHUB_TOKEN}}
+          script: |
+            console.log("PR title and commit title validation succeeded.");
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: "PR title and commit title validation succeeded."
+            })
