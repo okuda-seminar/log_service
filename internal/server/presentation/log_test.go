@@ -39,25 +39,20 @@ func (e *errorWriterResponse) WriteHeader(statusCode int) {
 }
 
 func TestNewAMQPLogHandler(t *testing.T) {
-	ctrl := gomock.NewController(t)
-
-	mockInsertUseCase := usecase.NewMockIInsertLogUseCase(ctrl)
-	handler := NewAMQPLogHandler(mockInsertUseCase, &amqp.Channel{})
-
 	fixedTime := time.Date(2024, 9, 23, 23, 7, 32, 840757000, time.Local)
 	logRequest, msg := testMsg(t, fixedTime)
 	tests := []struct {
 		name               string
 		msg                amqp.Delivery
-		mockFunc           func()
+		mockFunc           func(m *usecase.MockIInsertLogUseCase)
 		expectedStatusCode int
 		expectedMessage    string
 	}{
 		{
 			name: "success",
 			msg:  msg,
-			mockFunc: func() {
-				mockInsertUseCase.EXPECT().InsertLog(
+			mockFunc: func(m *usecase.MockIInsertLogUseCase) {
+				m.EXPECT().InsertLog(
 					gomock.Any(),
 					&usecase.InsertLogDto{
 						LogLevel:           logRequest.LogLevel,
@@ -74,14 +69,14 @@ func TestNewAMQPLogHandler(t *testing.T) {
 		{
 			name:               "failed",
 			msg:                amqp.Delivery{},
-			mockFunc:           func() {},
+			mockFunc:           func(m *usecase.MockIInsertLogUseCase) {},
 			expectedStatusCode: utils.INVALID_ARGUMENT,
 		},
 		{
 			name: "failed",
 			msg:  msg,
-			mockFunc: func() {
-				mockInsertUseCase.EXPECT().InsertLog(
+			mockFunc: func(m *usecase.MockIInsertLogUseCase) {
+				m.EXPECT().InsertLog(
 					gomock.Any(),
 					&usecase.InsertLogDto{
 						LogLevel:           logRequest.LogLevel,
@@ -98,8 +93,12 @@ func TestNewAMQPLogHandler(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tt.mockFunc()
+			ctrl := gomock.NewController(t)
+			mockInsertUseCase := usecase.NewMockIInsertLogUseCase(ctrl)
+			handler := NewAMQPLogHandler(mockInsertUseCase, &amqp.Channel{})
+			tt.mockFunc(mockInsertUseCase)
 			var patchResponseCode int
+			// gomonkey cannot be used for parallel tests because it operates on shared resources.
 			patch := gomonkey.ApplyMethod(
 				reflect.TypeOf(&amqp.Channel{}),
 				"Publish",
@@ -120,6 +119,7 @@ func TestNewAMQPLogHandler(t *testing.T) {
 					return nil
 				})
 			handler.HandleLog(tt.msg)
+			t.Log(patchResponseCode)
 
 			if patchResponseCode != tt.expectedStatusCode {
 				t.Errorf("Expected %d, got %d", tt.expectedStatusCode, patchResponseCode)
@@ -130,7 +130,9 @@ func TestNewAMQPLogHandler(t *testing.T) {
 }
 
 func TestParseAMQPLog(t *testing.T) {
+	t.Parallel()
 	t.Run("success", func(t *testing.T) {
+		t.Parallel()
 		fixedTime := time.Date(2024, 9, 23, 23, 7, 32, 840757000, time.Local)
 		logRequest, msg := testMsg(t, fixedTime)
 
@@ -159,6 +161,7 @@ func TestParseAMQPLog(t *testing.T) {
 	})
 
 	t.Run("failed", func(t *testing.T) {
+		t.Parallel()
 		msg := amqp.Delivery{}
 		_, err := ParseAMQPLog(msg)
 		if err == nil {
@@ -195,7 +198,9 @@ func SetupLogListTest(t *testing.T) (*gomock.Controller, *usecase.MockIListLogsU
 }
 
 func TestHandleLogList(t *testing.T) {
+	t.Parallel()
 	t.Run("Success", func(t *testing.T) {
+		t.Parallel()
 		_, mockListUseCase, handler := SetupLogListTest(t)
 
 		now := time.Now()
@@ -262,6 +267,7 @@ func TestHandleLogList(t *testing.T) {
 	})
 
 	t.Run("ListLogs Failure", func(t *testing.T) {
+		t.Parallel()
 		_, mockListUseCase, handler := SetupLogListTest(t)
 
 		mockListUseCase.EXPECT().ListLogs(gomock.Any()).Return(nil, errors.New("failed to list logs")).Times(1)
@@ -285,6 +291,7 @@ func TestHandleLogList(t *testing.T) {
 	})
 
 	t.Run("Encode Failure", func(t *testing.T) {
+		t.Parallel()
 		_, mockListUseCase, handler := SetupLogListTest(t)
 
 		time := time.Now()
@@ -310,7 +317,11 @@ func TestHandleLogList(t *testing.T) {
 		handler.HandleLogList(errorWriter, req)
 
 		if errorWriter.statusCode != http.StatusInternalServerError {
-			t.Errorf("handler returned wrong status code: got %v want %v", errorWriter.statusCode, http.StatusInternalServerError)
+			t.Errorf(
+				"handler returned wrong status code: got %v want %v",
+				errorWriter.statusCode,
+				http.StatusInternalServerError,
+			)
 		}
 
 		expected := "Internal Server Error: failed to encode logs\n"
