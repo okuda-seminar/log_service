@@ -1,0 +1,5 @@
+allow-prefix:
+  - "[CI/CD]"
+  - "[Server]"
+  - "[Client]"
+  - "[SDK]"
