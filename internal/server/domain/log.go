@@ -11,6 +11,11 @@ type Log struct {
 	Content            string
 }
 
+type CTRLog struct {
+	CreatedAt time.Time
+	Objectid  string
+}
+
 func NewLog(
 	logLevel string,
 	date time.Time,
@@ -26,5 +31,15 @@ func NewLog(
 		SourceService:      sourceService,
 		RequestType:        requestType,
 		Content:            content,
+	}
+}
+
+func NewCTRLog(
+	createdAt time.Time,
+	objectid string,
+) *CTRLog {
+	return &CTRLog{
+		CreatedAt: createdAt,
+		Objectid:  objectid,
 	}
 }
