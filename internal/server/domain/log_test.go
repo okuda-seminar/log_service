@@ -37,3 +37,20 @@ func TestNewLog(t *testing.T) {
 		t.Errorf("Expected Content %s, got %s", content, log.Content)
 	}
 }
+
+func TestNewCTRLog(t *testing.T) {
+	// Setup test data
+	createdAt := time.Now()
+	objectid := "123456"
+
+	// Call the function
+	ctrLog := NewCTRLog(createdAt, objectid)
+
+	// Check if the log is populated correctly
+	if ctrLog.CreatedAt != createdAt {
+		t.Errorf("Expected CreatedAt %s, got %s", createdAt, ctrLog.CreatedAt)
+	}
+	if ctrLog.Objectid != objectid {
+		t.Errorf("Expected Objectid %s, got %s", objectid, ctrLog.Objectid)
+	}
+}
