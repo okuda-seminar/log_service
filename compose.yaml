@@ -26,6 +26,10 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - logging_network
 
   phpmyadmin:
     image: phpmyadmin
@@ -35,6 +39,9 @@ services:
       - .env
     ports:
       - "3001:80"
+    networks:
+      - logging_network
+
   db:
     image: mysql:8
     restart: always
@@ -50,6 +57,9 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - logging_network
+
   rabbitmq:
     image: rabbitmq:3-management
     ports:
@@ -57,7 +67,18 @@ services:
       - 15672:15672
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - logging_network
+    healthcheck:
+      test: ["CMD", "rabbitmqctl", "node_health_check"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
 volumes:
   db-data:
   rabbitmq_data:
+
+networks:
+  logging_network:
+    external: true
