@@ -40,6 +40,20 @@ func (m *MockILogRepository) EXPECT() *MockILogRepositoryMockRecorder {
 	return m.recorder
 }
 
+// CTRSave mocks base method.
+func (m *MockILogRepository) CTRSave(ctx context.Context, ctrLog *CTRLog) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CTRSave", ctx, ctrLog)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// CTRSave indicates an expected call of CTRSave.
+func (mr *MockILogRepositoryMockRecorder) CTRSave(ctx, ctrLog any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CTRSave", reflect.TypeOf((*MockILogRepository)(nil).CTRSave), ctx, ctrLog)
+}
+
 // List mocks base method.
 func (m *MockILogRepository) List(ctx context.Context) ([]Log, error) {
 	m.ctrl.T.Helper()

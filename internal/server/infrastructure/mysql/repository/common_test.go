@@ -19,6 +19,7 @@ func TestMain(m *testing.M) {
 	defer dbConnTest.Close()
 
 	dbTest.SetupTestDB("../db/schema/000001_log.up.sql")
+	dbTest.SetupTestDB("../db/schema/000002_ctr_log.up.sql")
 
 	m.Run()
 }
