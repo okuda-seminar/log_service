@@ -50,3 +50,11 @@ func (r *LogRepository) List(ctx context.Context) ([]domain.Log, error) {
 
 	return result, nil
 }
+
+func (r *LogRepository) CTRSave(ctx context.Context, ctrLog *domain.CTRLog) error {
+	err := dbgen.New(r.db).InsertCTRLog(ctx, dbgen.InsertCTRLogParams{
+		CreatedAt: ctrLog.CreatedAt,
+		ObjectID:  ctrLog.Objectid,
+	})
+	return err
+}
