@@ -54,3 +54,18 @@ func TestInsertCTRLog(t *testing.T) {
 		t.Error("Failed to insert CTR log:", err)
 	}
 }
+
+func TestListCTRLogs(t *testing.T) {
+	repo := NewLogRepository(dbConnTest)
+	repo.CTRSave(context.Background(), &domain.CTRLog{
+		CreatedAt: time.Now(),
+		Objectid:  "123456",
+	})
+	results, err := repo.CTRList(context.Background())
+	if err != nil {
+		t.Error("Failed to list CTR logs:", err)
+	}
+	if len(results) != 2 {
+		t.Errorf("Expected 2 CTR logs, got %d", len(results))
+	}
+}

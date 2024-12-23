@@ -58,3 +58,20 @@ func (r *LogRepository) CTRSave(ctx context.Context, ctrLog *domain.CTRLog) erro
 	})
 	return err
 }
+
+func (r *LogRepository) CTRList(ctx context.Context) ([]domain.CTRLog, error) {
+	ctrLogs, err := dbgen.New(r.db).ListCTRLogs(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	var result []domain.CTRLog
+	for _, ctrLog := range ctrLogs {
+		result = append(result, domain.CTRLog{
+			CreatedAt: ctrLog.CreatedAt,
+			Objectid:  ctrLog.ObjectID,
+		})
+	}
+
+	return result, nil
+}

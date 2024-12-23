@@ -17,3 +17,9 @@ INSERT INTO ctr_logs (
 ) VALUES (
   ?, ?
 );
+
+-- name: ListCTRLogs :many
+SELECT
+  created_at, object_id
+FROM ctr_logs
+;
