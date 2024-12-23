@@ -37,3 +37,6 @@ docker-generate-mock:
 
 send_message:
 	RABBITMQ_URL=amqp://guest:guest@localhost:5672/ go run ./cmd/client $(ARGS)
+
+create_doc:
+	godoc -http=localhost:${GODOC_PORT}

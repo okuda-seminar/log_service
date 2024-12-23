@@ -57,6 +57,35 @@ func (q *Queries) InsertLog(ctx context.Context, arg InsertLogParams) error {
 	return err
 }
 
+const listCTRLogs = `-- name: ListCTRLogs :many
+SELECT
+  created_at, object_id
+FROM ctr_logs
+`
+
+func (q *Queries) ListCTRLogs(ctx context.Context) ([]CtrLog, error) {
+	rows, err := q.db.QueryContext(ctx, listCTRLogs)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []CtrLog
+	for rows.Next() {
+		var i CtrLog
+		if err := rows.Scan(&i.CreatedAt, &i.ObjectID); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listLogs = `-- name: ListLogs :many
 SELECT
   log_level, date, destination_service, source_service, request_type, content
