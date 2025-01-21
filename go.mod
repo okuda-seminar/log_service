@@ -10,6 +10,7 @@ require (
 	github.com/ory/dockertest v3.3.5+incompatible
 	github.com/rabbitmq/amqp091-go v1.10.0
 	github.com/sqldef/sqldef v0.17.19
+	github.com/stretchr/testify v1.9.0
 	go.uber.org/dig v1.18.0
 	go.uber.org/mock v0.4.0
 )
@@ -21,6 +22,7 @@ require (
 	github.com/Nvveen/Gotty v0.0.0-20120604004816-cd527374f1e5 // indirect
 	github.com/cenkalti/backoff v2.2.1+incompatible // indirect
 	github.com/containerd/continuity v0.4.3 // indirect
+	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/docker/go-connections v0.5.0 // indirect
 	github.com/docker/go-units v0.5.0 // indirect
 	github.com/gotestyourself/gotestyourself v2.2.0+incompatible // indirect
@@ -32,6 +34,7 @@ require (
 	github.com/opencontainers/image-spec v1.1.0 // indirect
 	github.com/opencontainers/runc v1.1.14 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
+	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/rogpeppe/go-internal v1.10.0 // indirect
 	github.com/sirupsen/logrus v1.9.3 // indirect
 	golang.org/x/net v0.25.0 // indirect
