@@ -38,13 +38,15 @@ func TestNewLog(t *testing.T) {
 	}
 }
 
+// TestNewCTRLog tests the NewCTRLog function
 func TestNewCTRLog(t *testing.T) {
 	// Setup test data
+	eventType := "click"
 	createdAt := time.Now()
 	objectid := "123456"
 
 	// Call the function
-	ctrLog := NewCTRLog(createdAt, objectid)
+	ctrLog := NewCTRLog(eventType, createdAt, objectid)
 
 	// Check if the log is populated correctly
 	if ctrLog.CreatedAt != createdAt {
@@ -52,5 +54,8 @@ func TestNewCTRLog(t *testing.T) {
 	}
 	if ctrLog.Objectid != objectid {
 		t.Errorf("Expected Objectid %s, got %s", objectid, ctrLog.Objectid)
+	}
+	if ctrLog.EventType != eventType {
+		t.Errorf("Expected EventType %s, got %s", eventType, ctrLog.EventType)
 	}
 }

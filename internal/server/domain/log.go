@@ -11,9 +11,16 @@ type Log struct {
 	Content            string
 }
 
+// CTRLog represents a log entry for tracking user interactions with a page element.
+//
+// The zero value of CTRLog is not valid for use; values should be explicitly initialized.
 type CTRLog struct {
+	// EventType specifies the type of interaction, such as "click" or "impression".
+	EventType string
+	// CreatedAt is the timestamp when the event occurred.
 	CreatedAt time.Time
-	Objectid  string
+	// ObjectID uniquely identifies the page element associated with the event.
+	ObjectID string
 }
 
 func NewLog(
@@ -34,11 +41,21 @@ func NewLog(
 	}
 }
 
+// NewCTRLog creates a new CTRLog instance with the specified event type,
+// creation timestamp, and associated object ID.
+//
+// eventType indicates the type of interaction, such as "click" or "impression".
+// createdAt specifies the timestamp when the event occurred.
+// objectid uniquely identifies the page element related to the event.
+//
+// Returns a pointer to a CTRLog instance initialized with the provided values.
 func NewCTRLog(
+	eventType string,
 	createdAt time.Time,
 	objectid string,
 ) *CTRLog {
 	return &CTRLog{
+		EventType: eventType,
 		CreatedAt: createdAt,
 		Objectid:  objectid,
 	}

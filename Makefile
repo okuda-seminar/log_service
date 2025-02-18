@@ -40,3 +40,6 @@ send_message:
 
 create_doc:
 	godoc -http=localhost:${GODOC_PORT}
+
+format:
+	go fmt ./...
