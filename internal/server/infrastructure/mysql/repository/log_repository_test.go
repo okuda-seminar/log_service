@@ -67,8 +67,9 @@ func (suite *LogRepositorySuite) TestList() {
 // TestInsertCTRLog tests the insertion of a CTR log entry into the database.
 func (suite *LogRepositorySuite) TestInsertCTRLog() {
 	err := suite.repo.CTRSave(context.Background(), &domain.CTRLog{
+		EventType: "tap",
 		CreatedAt: time.Now(),
-		Objectid:  "123456",
+		ObjectID:  "123456",
 	})
 	assert.NoError(suite.T(), err, "Failed to insert CTR log.")
 }
@@ -76,8 +77,9 @@ func (suite *LogRepositorySuite) TestInsertCTRLog() {
 // TestListCTRLogs tests the retrieval of CTR log entries from the database.
 func (suite *LogRepositorySuite) TestListCTRLogs() {
 	err := suite.repo.CTRSave(context.Background(), &domain.CTRLog{
+		EventType: "tap",
 		CreatedAt: time.Now(),
-		Objectid:  "123456",
+		ObjectID:  "123456",
 	})
 	require.NoError(suite.T(), err)
 

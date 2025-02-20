@@ -19,7 +19,7 @@ type CTRLog struct {
 	EventType string
 	// CreatedAt is the timestamp when the event occurred.
 	CreatedAt time.Time
-	// ObjectID uniquely identifies the page element associated with the event.
+	// ObjectID uniquely identifies the page element related to the event.
 	ObjectID string
 }
 
@@ -52,11 +52,11 @@ func NewLog(
 func NewCTRLog(
 	eventType string,
 	createdAt time.Time,
-	objectid string,
+	objectID string,
 ) *CTRLog {
 	return &CTRLog{
 		EventType: eventType,
 		CreatedAt: createdAt,
-		Objectid:  objectid,
+		ObjectID:  objectID,
 	}
 }
