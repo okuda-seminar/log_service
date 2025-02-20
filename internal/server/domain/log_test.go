@@ -43,17 +43,17 @@ func TestNewCTRLog(t *testing.T) {
 	// Setup test data
 	eventType := "click"
 	createdAt := time.Now()
-	objectid := "123456"
+	objectId := "123456"
 
 	// Call the function
-	ctrLog := NewCTRLog(eventType, createdAt, objectid)
+	ctrLog := NewCTRLog(eventType, createdAt, objectId)
 
 	// Check if the log is populated correctly
 	if ctrLog.CreatedAt != createdAt {
 		t.Errorf("Expected CreatedAt %s, got %s", createdAt, ctrLog.CreatedAt)
 	}
-	if ctrLog.Objectid != objectid {
-		t.Errorf("Expected Objectid %s, got %s", objectid, ctrLog.Objectid)
+	if ctrLog.ObjectId != objectId {
+		t.Errorf("Expected Objectid %s, got %s", objectId, ctrLog.ObjectId)
 	}
 	if ctrLog.EventType != eventType {
 		t.Errorf("Expected EventType %s, got %s", eventType, ctrLog.EventType)
