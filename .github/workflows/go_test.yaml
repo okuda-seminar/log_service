@@ -1,0 +1,37 @@
+name: "Action for testing Go code"
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Get the code
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # Set up Go
+      - name: Set up Go 1.23
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.23.0"
+
+      # Run tests with coverage
+      - name: Run tests with coverage
+        run: |
+          go test -v ./... -cover -coverprofile=coverage.out
+
+      # Extract and display test coverage summary
+      - name: Show test coverage summary
+        run: |
+          echo "### Test Coverage Report " >> $GITHUB_STEP_SUMMARY
+          go tool cover -func=coverage.out | tee coverage_summary.txt | tail -n 1 | awk '{print "**Total Coverage:** "$3}' >> $GITHUB_STEP_SUMMARY
+
+      # Output detailed test coverage to logs
+      - name: Log detailed coverage
+        run: |
+          echo "🔍 Detailed Coverage Breakdown:"
+          go tool cover -func=coverage.out
