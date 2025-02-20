@@ -1,0 +1,25 @@
+name: "Action for testing Go code"
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Get the code
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # Set up Go 1.23
+      - name: Set up Go 1.23
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.23.0"
+
+      # Implement the test step
+      - name: Run tests
+        run: |
+          go test -v ./...
