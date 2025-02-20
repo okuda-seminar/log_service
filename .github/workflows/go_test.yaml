@@ -1,0 +1,34 @@
+name: "Go Test and Coverage"
+
+on:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: ./go.mod
+
+      - name: Install dependencies
+        run: go install github.com/boumenot/gocover-cobertura@latest
+
+      - name: Run tests with coverage
+        run: |
+          go test -race -cover ./... -gcflags="all=-N -l" -v -coverprofile=cover.out
+
+      - name: Convert coverage report
+        run: gocover-cobertura < cover.out > coverage.xml
+
+      - name: Run octocov
+        uses: k1LoW/octocov-action@v1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          base: main
+          compare: true
