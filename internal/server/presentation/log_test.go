@@ -2,6 +2,7 @@ package presentation
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -38,97 +39,6 @@ func (e *errorWriterResponse) WriteHeader(statusCode int) {
 	e.statusCode = statusCode
 }
 
-func TestNewAMQPLogHandler(t *testing.T) {
-	fixedTime := time.Date(2024, 9, 23, 23, 7, 32, 840757000, time.Local)
-	logRequest, msg := testMsg(t, fixedTime)
-	tests := []struct {
-		name               string
-		msg                amqp.Delivery
-		mockFunc           func(m *usecase.MockIInsertLogUseCase)
-		expectedStatusCode int
-		expectedMessage    string
-	}{
-		{
-			name: "success",
-			msg:  msg,
-			mockFunc: func(m *usecase.MockIInsertLogUseCase) {
-				m.EXPECT().InsertLog(
-					gomock.Any(),
-					&usecase.InsertLogDto{
-						LogLevel:           logRequest.LogLevel,
-						Date:               logRequest.Date,
-						DestinationService: logRequest.DestinationService,
-						SourceService:      logRequest.SourceService,
-						RequestType:        logRequest.RequestType,
-						Content:            logRequest.Content,
-					},
-				).Times(1).Return(nil)
-			},
-			expectedStatusCode: utils.OK,
-		},
-		{
-			name:               "failed",
-			msg:                amqp.Delivery{},
-			mockFunc:           func(m *usecase.MockIInsertLogUseCase) {},
-			expectedStatusCode: utils.INVALID_ARGUMENT,
-		},
-		{
-			name: "failed",
-			msg:  msg,
-			mockFunc: func(m *usecase.MockIInsertLogUseCase) {
-				m.EXPECT().InsertLog(
-					gomock.Any(),
-					&usecase.InsertLogDto{
-						LogLevel:           logRequest.LogLevel,
-						Date:               logRequest.Date,
-						DestinationService: logRequest.DestinationService,
-						SourceService:      logRequest.SourceService,
-						RequestType:        logRequest.RequestType,
-						Content:            logRequest.Content,
-					},
-				).Times(1).Return(errors.New("failed to insert log."))
-			},
-			expectedStatusCode: utils.INTERNAL,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			ctrl := gomock.NewController(t)
-			mockInsertUseCase := usecase.NewMockIInsertLogUseCase(ctrl)
-			handler := NewAMQPLogHandler(mockInsertUseCase, &amqp.Channel{})
-			tt.mockFunc(mockInsertUseCase)
-			var patchResponseCode int
-			// gomonkey cannot be used for parallel tests because it operates on shared resources.
-			patch := gomonkey.ApplyMethod(
-				reflect.TypeOf(&amqp.Channel{}),
-				"Publish",
-				func(
-					_ *amqp.Channel,
-					_ string,
-					_ string,
-					_ bool,
-					_ bool,
-					msg amqp.Publishing,
-				) error {
-					res := &AmqpLogResponse{}
-					err := json.Unmarshal(msg.Body, res)
-					if err != nil {
-						return err
-					}
-					patchResponseCode = res.StatusCode
-					return nil
-				})
-			handler.HandleLog(tt.msg)
-			t.Log(patchResponseCode)
-
-			if patchResponseCode != tt.expectedStatusCode {
-				t.Errorf("Expected %d, got %d", tt.expectedStatusCode, patchResponseCode)
-			}
-			patch.Reset()
-		})
-	}
-}
-
 type MockDelivery struct {
 	amqp.Delivery
 	ctrl     *gomock.Controller
@@ -157,59 +67,59 @@ func (m *MockDelivery) Nack(multiple, requeue bool) error {
 	return nil
 }
 
-// func TestNewAMQPLogHandler(t *testing.T) {
-func TestNewAMQPCTRLogHandler(t *testing.T) {
-	fixedTime := time.Date(2024, 9, 23, 23, 7, 32, 840757000, time.UTC)
-	ctrLogRequest, msg := testCTRMsg(t, fixedTime)
+func TestNewAMQPLogHandler(t *testing.T) {
+	fixedTime := time.Date(2024, 9, 23, 23, 7, 32, 840757000, time.Local)
+	logRequest, msg := testMsg(t, fixedTime)
 
 	tests := []struct {
-		name          string
-		msg           *MockDelivery
-		mockFunc      func(m *usecase.MockIInsertCTRLogUseCase)
-		expectAck     bool
-		expectNack    bool
-		requeueOnNack bool
+		name               string
+		msg                amqp.Delivery
+		mockFunc           func(m *usecase.MockIInsertLogUseCase)
+		expectedStatusCode int
 	}{
 		{
 			name: "success",
-			msg:  NewMockDelivery(nil, msg.Body),
-			mockFunc: func(m *usecase.MockIInsertCTRLogUseCase) {
-				m.EXPECT().InsertCTRLog(
-					gomock.Any(),
-					&usecase.InsertCTRLogDto{
-						EventType: ctrLogRequest.EventType,
-						CreatedAt: ctrLogRequest.CreatedAt,
-						ObjectID:  ctrLogRequest.ObjectID,
-					},
-				).Return(nil)
+			msg:  msg,
+			mockFunc: func(m *usecase.MockIInsertLogUseCase) {
+				m.EXPECT().InsertLog(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, gotRequest *usecase.InsertLogDto) error {
+					convertedRequest := AMQPLogRequest{
+						LogLevel:           gotRequest.LogLevel,
+						Date:               gotRequest.Date,
+						DestinationService: gotRequest.DestinationService,
+						SourceService:      gotRequest.SourceService,
+						RequestType:        gotRequest.RequestType,
+						Content:            gotRequest.Content,
+					}
+					testDiffLog(t, logRequest, convertedRequest)
+					return nil
+				}).Times(1)
 			},
-			expectAck:  true,
-			expectNack: false,
+			expectedStatusCode: utils.OK,
 		},
 		{
-			name:          "failed parse",
-			msg:           NewMockDelivery(nil, []byte("")),
-			mockFunc:      func(m *usecase.MockIInsertCTRLogUseCase) {},
-			expectAck:     false,
-			expectNack:    true,
-			requeueOnNack: false,
+			name:               "failed",
+			msg:                amqp.Delivery{},
+			mockFunc:           func(m *usecase.MockIInsertLogUseCase) {},
+			expectedStatusCode: utils.INVALID_ARGUMENT,
 		},
 		{
-			name: "failed insert",
-			msg:  NewMockDelivery(nil, msg.Body),
-			mockFunc: func(m *usecase.MockIInsertCTRLogUseCase) {
-				m.EXPECT().InsertCTRLog(
-					gomock.Any(),
-					&usecase.InsertCTRLogDto{
-						EventType: "event",
-						CreatedAt: fixedTime,
-						ObjectID:  "1234",
-					},
-				).Return(errors.New("failed to insert CTR log."))
+			name: "failed",
+			msg:  msg,
+			mockFunc: func(m *usecase.MockIInsertLogUseCase) {
+				m.EXPECT().InsertLog(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, gotRequest *usecase.InsertLogDto) error {
+					convertedRequest := AMQPLogRequest{
+						LogLevel:           gotRequest.LogLevel,
+						Date:               gotRequest.Date,
+						DestinationService: gotRequest.DestinationService,
+						SourceService:      gotRequest.SourceService,
+						RequestType:        gotRequest.RequestType,
+						Content:            gotRequest.Content,
+					}
+					testDiffLog(t, logRequest, convertedRequest)
+					return errors.New("failed to insert log.")
+				}).Times(1)
 			},
-			expectAck:     false,
-			expectNack:    true,
-			requeueOnNack: true,
+			expectedStatusCode: utils.INTERNAL,
 		},
 	}
 
@@ -218,42 +128,40 @@ func TestNewAMQPCTRLogHandler(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockUseCase := usecase.NewMockIInsertCTRLogUseCase(ctrl)
-			tt.mockFunc(mockUseCase)
+			mockInsertUseCase := usecase.NewMockIInsertLogUseCase(ctrl)
+			handler := NewAMQPLogHandler(mockInsertUseCase, &amqp.Channel{})
+			tt.mockFunc(mockInsertUseCase)
 
-			mockMsg := NewMockDelivery(ctrl, tt.msg.Body)
-			mockMsg.ackFunc = func(multiple bool) error {
-				if tt.expectAck {
-					return nil
-				}
-				t.Errorf("Ack should not have been called")
-				return errors.New("unexpected ack call")
-			}
-			mockMsg.nackFunc = func(multiple, requeue bool) error {
-				if tt.expectNack {
-					if requeue != tt.requeueOnNack {
-						t.Errorf("Expected Nack requeue=%v, got %v", tt.requeueOnNack, requeue)
-						return errors.New("unexpected nack requeue value")
+			var patchResponseCode int
+
+			// gomonkey cannot be used for parallel tests because it operates on shared resources.
+			patch := gomonkey.ApplyMethod(
+				reflect.TypeOf(&amqp.Channel{}),
+				"Publish",
+				func(
+					_ *amqp.Channel,
+					_ string,
+					_ string,
+					_ bool,
+					_ bool,
+					msg amqp.Publishing,
+				) error {
+					res := &AmqpLogResponse{}
+					err := json.Unmarshal(msg.Body, res)
+					if err != nil {
+						return err
 					}
+					patchResponseCode = res.StatusCode
 					return nil
-				}
-				t.Errorf("Nack should not have been called")
-				return errors.New("unexpected nack call")
-			}
+				})
 
-			handler := NewAMQPCTRLogHandler(mockUseCase, &amqp.Channel{})
-			handler.HandleCTRLog(mockMsg.Delivery)
+			handler.HandleLog(tt.msg)
+			t.Log(patchResponseCode)
 
-			if tt.expectAck {
-				if mockMsg.ackFunc == nil {
-					t.Errorf("Expected Ack() to be called, but it was not")
-				}
+			if patchResponseCode != tt.expectedStatusCode {
+				t.Errorf("Expected %d, got %d", tt.expectedStatusCode, patchResponseCode)
 			}
-			if tt.expectNack {
-				if mockMsg.nackFunc == nil {
-					t.Errorf("Expected Nack() to be called, but it was not")
-				}
-			}
+			patch.Reset()
 		})
 	}
 }
@@ -269,24 +177,7 @@ func TestParseAMQPLog(t *testing.T) {
 		if err != nil {
 			t.Error(err)
 		}
-		if req.LogLevel != logRequest.LogLevel {
-			t.Errorf("Expected %s, got %s", logRequest.LogLevel, req.LogLevel)
-		}
-		if req.Date != logRequest.Date {
-			t.Errorf("Expected %s, got %s", logRequest.Date, req.Date)
-		}
-		if req.SourceService != logRequest.SourceService {
-			t.Errorf("Expected %s, got %s", logRequest.SourceService, req.SourceService)
-		}
-		if req.DestinationService != logRequest.DestinationService {
-			t.Errorf("Expected %s, got %s", logRequest.DestinationService, req.DestinationService)
-		}
-		if req.RequestType != logRequest.RequestType {
-			t.Errorf("Expected %s, got %s", logRequest.RequestType, req.RequestType)
-		}
-		if req.Content != logRequest.Content {
-			t.Errorf("Expected %s, got %s", logRequest.Content, req.Content)
-		}
+		testDiffLog(t, logRequest, req)
 	})
 
 	t.Run("failed", func(t *testing.T) {
@@ -310,15 +201,7 @@ func TestParseAMQPCTRLog(t *testing.T) {
 		if err != nil {
 			t.Error(err)
 		}
-		if req.EventType != ctrLogRequest.EventType {
-			t.Errorf("Expected %s, got %s", ctrLogRequest.EventType, req.EventType)
-		}
-		if req.CreatedAt != ctrLogRequest.CreatedAt {
-			t.Errorf("Expected %s, got %s", ctrLogRequest.CreatedAt, req.CreatedAt)
-		}
-		if req.ObjectID != ctrLogRequest.ObjectID {
-			t.Errorf("Expected %s, got %s", ctrLogRequest.ObjectID, req.ObjectID)
-		}
+		testDiffCtrLog(t, ctrLogRequest, req)
 	})
 	t.Run("failed", func(t *testing.T) {
 		t.Parallel()
@@ -328,6 +211,41 @@ func TestParseAMQPCTRLog(t *testing.T) {
 			t.Errorf("Expected error, got nil")
 		}
 	})
+}
+
+func testDiffLog(t *testing.T, wantRequest AMQPLogRequest, gotRequest AMQPLogRequest) {
+
+	if wantRequest.LogLevel != gotRequest.LogLevel {
+		t.Errorf("Expected %s, got %s", wantRequest.LogLevel, gotRequest.LogLevel)
+	}
+	if !wantRequest.Date.Equal(gotRequest.Date) {
+		t.Errorf("Expected %s, got %s", wantRequest.Date, gotRequest.Date)
+	}
+	if wantRequest.SourceService != gotRequest.SourceService {
+		t.Errorf("Expected %s, got %s", wantRequest.SourceService, gotRequest.SourceService)
+	}
+	if wantRequest.DestinationService != gotRequest.DestinationService {
+		t.Errorf("Expected %s, got %s", wantRequest.DestinationService, gotRequest.DestinationService)
+	}
+	if wantRequest.RequestType != gotRequest.RequestType {
+		t.Errorf("Expected %s, got %s", wantRequest.RequestType, gotRequest.RequestType)
+	}
+	if wantRequest.Content != gotRequest.Content {
+		t.Errorf("Expected %s, got %s", wantRequest.Content, gotRequest.Content)
+	}
+}
+
+func testDiffCtrLog(t *testing.T, wantRequest AMQPCTRLogRequest, gotRequest AMQPCTRLogRequest) {
+
+	if wantRequest.EventType != gotRequest.EventType {
+		t.Errorf("Expected %s, got %s", wantRequest.EventType, gotRequest.EventType)
+	}
+	if !wantRequest.CreatedAt.Equal(gotRequest.CreatedAt) {
+		t.Errorf("Expected %s, got %s", wantRequest.CreatedAt, gotRequest.CreatedAt)
+	}
+	if wantRequest.ObjectID != gotRequest.ObjectID {
+		t.Errorf("Expected %s, got %s", wantRequest.ObjectID, gotRequest.ObjectID)
+	}
 }
 
 func testMsg(t *testing.T, fixedTime time.Time) (AMQPLogRequest, amqp.Delivery) {

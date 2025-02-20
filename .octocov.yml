@@ -1,0 +1,26 @@
+coverage:
+  badge:
+    path: docs/coverage.svg
+push:
+  if: is_default_branch
+codeToTestRatio:
+  code:
+    - '**/*.go'
+    - '!**/*_test.go'
+  test:
+    - '**/*_test.go'
+  badge:
+    path: docs/ratio.svg
+testExecutionTime:
+  badge:
+    path: docs/time.svg
+diff:
+  datastores:
+    - artifact://${GITHUB_REPOSITORY}
+comment:
+  if: is_pull_request
+report:
+  datastores:
+    - artifact://${GITHUB_REPOSITORY}
+summary:
+  if: true
