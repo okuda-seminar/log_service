@@ -13,13 +13,13 @@ FROM logs
 
 -- name: InsertCTRLog :exec
 INSERT INTO ctr_logs (
-  created_at, object_id
+  event_type, created_at, object_id
 ) VALUES (
-  ?, ?
+  ?, ?, ?
 );
 
 -- name: ListCTRLogs :many
 SELECT
-  created_at, object_id
+  event_type, created_at, object_id
 FROM ctr_logs
 ;

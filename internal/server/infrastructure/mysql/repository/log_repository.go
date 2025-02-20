@@ -61,8 +61,9 @@ func (r *LogRepository) List(ctx context.Context) ([]domain.Log, error) {
 // It takes a context and a CTRLog object from the domain package as arguments.
 func (r *LogRepository) CTRSave(ctx context.Context, ctrLog *domain.CTRLog) error {
 	err := dbgen.New(r.db).InsertCTRLog(ctx, dbgen.InsertCTRLogParams{
+		EventType: ctrLog.EventType,
 		CreatedAt: ctrLog.CreatedAt,
-		ObjectID:  ctrLog.Objectid,
+		ObjectID:  ctrLog.ObjectID,
 	})
 	return err
 }
@@ -78,8 +79,9 @@ func (r *LogRepository) CTRList(ctx context.Context) ([]domain.CTRLog, error) {
 	var result []domain.CTRLog
 	for _, ctrLog := range ctrLogs {
 		result = append(result, domain.CTRLog{
+			EventType: ctrLog.EventType,
 			CreatedAt: ctrLog.CreatedAt,
-			Objectid:  ctrLog.ObjectID,
+			ObjectID:  ctrLog.ObjectID,
 		})
 	}
 
