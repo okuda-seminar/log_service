@@ -53,3 +53,41 @@ func (mr *MockIInsertLogUseCaseMockRecorder) InsertLog(ctx, dto any) *gomock.Cal
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InsertLog", reflect.TypeOf((*MockIInsertLogUseCase)(nil).InsertLog), ctx, dto)
 }
+
+// MockIInsertCTRLogUseCase is a mock of IInsertCTRLogUseCase interface.
+type MockIInsertCTRLogUseCase struct {
+	ctrl     *gomock.Controller
+	recorder *MockIInsertCTRLogUseCaseMockRecorder
+	isgomock struct{}
+}
+
+// MockIInsertCTRLogUseCaseMockRecorder is the mock recorder for MockIInsertCTRLogUseCase.
+type MockIInsertCTRLogUseCaseMockRecorder struct {
+	mock *MockIInsertCTRLogUseCase
+}
+
+// NewMockIInsertCTRLogUseCase creates a new mock instance.
+func NewMockIInsertCTRLogUseCase(ctrl *gomock.Controller) *MockIInsertCTRLogUseCase {
+	mock := &MockIInsertCTRLogUseCase{ctrl: ctrl}
+	mock.recorder = &MockIInsertCTRLogUseCaseMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockIInsertCTRLogUseCase) EXPECT() *MockIInsertCTRLogUseCaseMockRecorder {
+	return m.recorder
+}
+
+// InsertCTRLog mocks base method.
+func (m *MockIInsertCTRLogUseCase) InsertCTRLog(ctx context.Context, dto *InsertCTRLogDto) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "InsertCTRLog", ctx, dto)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// InsertCTRLog indicates an expected call of InsertCTRLog.
+func (mr *MockIInsertCTRLogUseCaseMockRecorder) InsertCTRLog(ctx, dto any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InsertCTRLog", reflect.TypeOf((*MockIInsertCTRLogUseCase)(nil).InsertCTRLog), ctx, dto)
+}

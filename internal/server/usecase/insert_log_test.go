@@ -59,4 +59,51 @@ func TestInsertLog(t *testing.T) {
 			}
 		})
 	}
+
+}
+
+func TestInsertCTRLog(t *testing.T) {
+	t.Parallel()
+
+	currTime := time.Now()
+
+	CTRtests := []struct {
+		name     string
+		dto      *InsertCTRLogDto
+		mockFunc func(*domain.MockILogRepository)
+	}{
+		{
+			name: "success",
+			dto: &InsertCTRLogDto{
+				EventType: "tap",
+				CreatedAt: currTime,
+				ObjectID:  "123",
+			},
+			mockFunc: func(m *domain.MockILogRepository) {
+				m.EXPECT().CTRSave(
+					gomock.Any(),
+					&domain.CTRLog{
+						EventType: "tap",
+						CreatedAt: currTime,
+						ObjectID:  "123",
+					},
+				).Return(nil)
+			},
+		},
+	}
+
+	for _, tt := range CTRtests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			ctrl := gomock.NewController(t)
+			mockUserRepo := domain.NewMockILogRepository(ctrl)
+			logInsertUseCase := NewInsertLogUseCase(mockUserRepo)
+			ctx := context.Background()
+			tt.mockFunc(mockUserRepo)
+			err := logInsertUseCase.InsertCTRLog(ctx, tt.dto)
+			if err != nil {
+				t.Errorf("InsertCTRLog() error = %v", err)
+			}
+		})
+	}
 }
