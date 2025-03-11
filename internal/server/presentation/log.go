@@ -19,12 +19,24 @@ type AMQPLogHandler struct {
 	Channel    *amqp.Channel
 }
 
+type AMQPCTRLogHandler struct {
+	LogUseCase usecase.IInsertCTRLogUseCase
+	Channel    *amqp.Channel
+}
+
 type HttpLogHandler struct {
 	ListUseCase usecase.IListLogsUseCase
 }
 
 func NewAMQPLogHandler(logUseCase usecase.IInsertLogUseCase, ch *amqp.Channel) *AMQPLogHandler {
 	return &AMQPLogHandler{
+		LogUseCase: logUseCase,
+		Channel:    ch,
+	}
+}
+
+func NewAMQPCTRLogHandler(logUseCase usecase.IInsertCTRLogUseCase, ch *amqp.Channel) *AMQPCTRLogHandler {
+	return &AMQPCTRLogHandler{
 		LogUseCase: logUseCase,
 		Channel:    ch,
 	}
@@ -59,6 +71,33 @@ func (h *AMQPLogHandler) HandleLog(msg amqp.Delivery) {
 	h.SendResponse(utils.OK, "OK", msg.ReplyTo, msg.CorrelationId)
 }
 
+// TODO: [Server] Improve the current RPC Implementation to reduct frontend delays
+// https://github.com/okuda-seminar/log_service/issues/85
+func (h *AMQPCTRLogHandler) HandleCTRLog(msg amqp.Delivery) {
+	req, err := ParseAMQPCTRLog(msg)
+	if err != nil {
+		log.Println("failed to parse CTR log request:", err)
+		// In case of invalid request, we should nack the message without requeue
+		msg.Nack(false, false)
+		return
+	}
+	logDto := &usecase.InsertCTRLogDto{
+		EventType: req.EventType,
+		CreatedAt: req.CreatedAt,
+		ObjectID:  req.ObjectID,
+	}
+	err = h.LogUseCase.InsertCTRLog(context.Background(), logDto)
+	if err != nil {
+		log.Println("failed to insert CTR log:", err)
+		// In case of internal server error, we should nack the message with requeue
+		msg.Nack(false, true)
+		return
+	}
+
+	// Acknowledge the message
+	msg.Ack(false)
+}
+
 func ParseAMQPLog(msg amqp.Delivery) (AMQPLogRequest, error) {
 	var req AMQPLogRequest
 
@@ -68,6 +107,17 @@ func ParseAMQPLog(msg amqp.Delivery) (AMQPLogRequest, error) {
 		return req, err
 	}
 	return req, nil
+}
+
+func ParseAMQPCTRLog(msg amqp.Delivery) (AMQPCTRLogRequest, error) {
+	var req AMQPCTRLogRequest
+
+	decoder := json.NewDecoder(bytes.NewReader(msg.Body))
+	err := decoder.Decode(&req)
+	if err != nil {
+		return req, err
+	}
+	return req, err
 }
 
 func (h *AMQPLogHandler) SendResponse(statusCode int, message, key, corrID string) {
