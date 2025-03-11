@@ -129,6 +129,135 @@ func TestNewAMQPLogHandler(t *testing.T) {
 	}
 }
 
+type MockDelivery struct {
+	amqp.Delivery
+	ctrl     *gomock.Controller
+	ackFunc  func(multiple bool) error
+	nackFunc func(multiple, requeue bool) error
+}
+
+func NewMockDelivery(ctrl *gomock.Controller, body []byte) *MockDelivery {
+	return &MockDelivery{
+		Delivery: amqp.Delivery{Body: body},
+		ctrl:     ctrl,
+	}
+}
+
+func (m *MockDelivery) Ack(multiple bool) error {
+	if m.ackFunc != nil {
+		return m.ackFunc(multiple)
+	}
+	return nil
+}
+
+func (m *MockDelivery) Nack(multiple, requeue bool) error {
+	if m.nackFunc != nil {
+		return m.nackFunc(multiple, requeue)
+	}
+	return nil
+}
+
+// func TestNewAMQPLogHandler(t *testing.T) {
+func TestNewAMQPCTRLogHandler(t *testing.T) {
+	fixedTime := time.Date(2024, 9, 23, 23, 7, 32, 840757000, time.UTC)
+	ctrLogRequest, msg := testCTRMsg(t, fixedTime)
+
+	tests := []struct {
+		name          string
+		msg           *MockDelivery
+		mockFunc      func(m *usecase.MockIInsertCTRLogUseCase)
+		expectAck     bool
+		expectNack    bool
+		requeueOnNack bool
+	}{
+		{
+			name: "success",
+			msg:  NewMockDelivery(nil, msg.Body),
+			mockFunc: func(m *usecase.MockIInsertCTRLogUseCase) {
+				m.EXPECT().InsertCTRLog(
+					gomock.Any(),
+					&usecase.InsertCTRLogDto{
+						EventType: ctrLogRequest.EventType,
+						CreatedAt: ctrLogRequest.CreatedAt,
+						ObjectID:  ctrLogRequest.ObjectID,
+					},
+				).Return(nil)
+			},
+			expectAck:  true,
+			expectNack: false,
+		},
+		{
+			name:          "failed parse",
+			msg:           NewMockDelivery(nil, []byte("")),
+			mockFunc:      func(m *usecase.MockIInsertCTRLogUseCase) {},
+			expectAck:     false,
+			expectNack:    true,
+			requeueOnNack: false,
+		},
+		{
+			name: "failed insert",
+			msg:  NewMockDelivery(nil, msg.Body),
+			mockFunc: func(m *usecase.MockIInsertCTRLogUseCase) {
+				m.EXPECT().InsertCTRLog(
+					gomock.Any(),
+					&usecase.InsertCTRLogDto{
+						EventType: "event",
+						CreatedAt: fixedTime,
+						ObjectID:  "1234",
+					},
+				).Return(errors.New("failed to insert CTR log."))
+			},
+			expectAck:     false,
+			expectNack:    true,
+			requeueOnNack: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockUseCase := usecase.NewMockIInsertCTRLogUseCase(ctrl)
+			tt.mockFunc(mockUseCase)
+
+			mockMsg := NewMockDelivery(ctrl, tt.msg.Body)
+			mockMsg.ackFunc = func(multiple bool) error {
+				if tt.expectAck {
+					return nil
+				}
+				t.Errorf("Ack should not have been called")
+				return errors.New("unexpected ack call")
+			}
+			mockMsg.nackFunc = func(multiple, requeue bool) error {
+				if tt.expectNack {
+					if requeue != tt.requeueOnNack {
+						t.Errorf("Expected Nack requeue=%v, got %v", tt.requeueOnNack, requeue)
+						return errors.New("unexpected nack requeue value")
+					}
+					return nil
+				}
+				t.Errorf("Nack should not have been called")
+				return errors.New("unexpected nack call")
+			}
+
+			handler := NewAMQPCTRLogHandler(mockUseCase, &amqp.Channel{})
+			handler.HandleCTRLog(mockMsg.Delivery)
+
+			if tt.expectAck {
+				if mockMsg.ackFunc == nil {
+					t.Errorf("Expected Ack() to be called, but it was not")
+				}
+			}
+			if tt.expectNack {
+				if mockMsg.nackFunc == nil {
+					t.Errorf("Expected Nack() to be called, but it was not")
+				}
+			}
+		})
+	}
+}
+
 func TestParseAMQPLog(t *testing.T) {
 	t.Parallel()
 	t.Run("success", func(t *testing.T) {
@@ -170,6 +299,37 @@ func TestParseAMQPLog(t *testing.T) {
 	})
 }
 
+func TestParseAMQPCTRLog(t *testing.T) {
+	t.Parallel()
+	t.Run("success", func(t *testing.T) {
+		t.Parallel()
+		fixedTime := time.Date(2024, 9, 23, 23, 7, 32, 840757000, time.Local)
+		ctrLogRequest, msg := testCTRMsg(t, fixedTime)
+
+		req, err := ParseAMQPCTRLog(msg)
+		if err != nil {
+			t.Error(err)
+		}
+		if req.EventType != ctrLogRequest.EventType {
+			t.Errorf("Expected %s, got %s", ctrLogRequest.EventType, req.EventType)
+		}
+		if req.CreatedAt != ctrLogRequest.CreatedAt {
+			t.Errorf("Expected %s, got %s", ctrLogRequest.CreatedAt, req.CreatedAt)
+		}
+		if req.ObjectID != ctrLogRequest.ObjectID {
+			t.Errorf("Expected %s, got %s", ctrLogRequest.ObjectID, req.ObjectID)
+		}
+	})
+	t.Run("failed", func(t *testing.T) {
+		t.Parallel()
+		msg := amqp.Delivery{}
+		_, err := ParseAMQPCTRLog(msg)
+		if err == nil {
+			t.Errorf("Expected error, got nil")
+		}
+	})
+}
+
 func testMsg(t *testing.T, fixedTime time.Time) (AMQPLogRequest, amqp.Delivery) {
 	logRequest := AMQPLogRequest{
 		LogLevel:           "INFO",
@@ -178,6 +338,23 @@ func testMsg(t *testing.T, fixedTime time.Time) (AMQPLogRequest, amqp.Delivery) 
 		DestinationService: "AuthService",
 		RequestType:        "POST",
 		Content:            "User created successfully.",
+	}
+
+	var payload bytes.Buffer
+	err := json.NewEncoder(&payload).Encode(logRequest)
+	if err != nil {
+		t.Error(err)
+	}
+
+	msg := amqp.Delivery{Body: payload.Bytes()}
+	return logRequest, msg
+}
+
+func testCTRMsg(t *testing.T, fixedTime time.Time) (AMQPCTRLogRequest, amqp.Delivery) {
+	logRequest := AMQPCTRLogRequest{
+		EventType: "event",
+		CreatedAt: fixedTime,
+		ObjectID:  "1234",
 	}
 
 	var payload bytes.Buffer

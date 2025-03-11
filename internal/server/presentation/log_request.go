@@ -10,3 +10,9 @@ type AMQPLogRequest struct {
 	RequestType        string    `json:"request_type"`
 	Content            string    `json:"content"`
 }
+
+type AMQPCTRLogRequest struct {
+	EventType string    `json:"eventType"`
+	ObjectID  string    `json:"objectId"`
+	CreatedAt time.Time `json:"createdAt"`
+}
