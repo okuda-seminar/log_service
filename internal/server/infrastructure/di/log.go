@@ -29,6 +29,10 @@ func BuildLogContainer() (*dig.Container, error) {
 		return nil, err
 	}
 
+	if err := container.Provide(usecase.NewInsertCTRLogUseCase, dig.As(new(usecase.IInsertCTRLogUseCase))); err != nil {
+		return nil, err
+	}
+
 	if err := container.Provide(rabbitmq.Connect); err != nil {
 		return nil, err
 	}
@@ -38,6 +42,10 @@ func BuildLogContainer() (*dig.Container, error) {
 	}
 
 	if err := container.Provide(presentation.NewHttpLogHandler); err != nil {
+		return nil, err
+	}
+
+	if err := container.Provide(presentation.NewAMQPCTRLogHandler); err != nil {
 		return nil, err
 	}
 
