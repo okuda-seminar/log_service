@@ -69,7 +69,7 @@ func (u *InsertLogUseCase) InsertLog(ctx context.Context, dto *InsertLogDto) err
 // InsertCTRLog inserts a new CTR log entry into the database.
 // It takes a context and a CTRLogDto object as arguments.
 // It returns an error if the operation fails.
-func (u *InsertLogUseCase) InsertCTRLog(ctx context.Context, dto *InsertCTRLogDto) error {
+func (u *InsertCTRLogUseCase) InsertCTRLog(ctx context.Context, dto *InsertCTRLogDto) error {
 	ctrLog := domain.NewCTRLog(
 		dto.EventType,
 		dto.CreatedAt,

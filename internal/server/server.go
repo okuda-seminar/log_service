@@ -30,8 +30,9 @@ func Run() error {
 		dbConn *sql.DB,
 		amqpConn *amqp091.Connection,
 		amqpCh *amqp091.Channel,
-		amqpMsgs <-chan amqp091.Delivery,
+		amqpCTRMsgs <-chan amqp091.Delivery,
 		amqpLogHandler *presentation.AMQPLogHandler,
+		amqpCtrLogHandler *presentation.AMQPCTRLogHandler,
 		httpLogHander *presentation.HttpLogHandler,
 	) {
 		defer dbConn.Close()
@@ -40,13 +41,9 @@ func Run() error {
 
 		done := make(chan bool)
 		go func() {
-			for d := range amqpMsgs {
-				amqpLogHandler.HandleLog(d)
-				if err := d.Ack(false); err != nil {
-					log.Fatalf("Failed to ack message: %v", err)
-				}
+			for d := range amqpCTRMsgs {
+				amqpCtrLogHandler.HandleCTRLog(d)
 			}
-			done <- true
 		}()
 
 		mux := http.NewServeMux()

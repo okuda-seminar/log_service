@@ -97,10 +97,10 @@ func TestInsertCTRLog(t *testing.T) {
 			t.Parallel()
 			ctrl := gomock.NewController(t)
 			mockUserRepo := domain.NewMockILogRepository(ctrl)
-			logInsertUseCase := NewInsertLogUseCase(mockUserRepo)
+			ctrLogInsertUseCase := NewInsertCTRLogUseCase(mockUserRepo)
 			ctx := context.Background()
 			tt.mockFunc(mockUserRepo)
-			err := logInsertUseCase.InsertCTRLog(ctx, tt.dto)
+			err := ctrLogInsertUseCase.InsertCTRLog(ctx, tt.dto)
 			if err != nil {
 				t.Errorf("InsertCTRLog() error = %v", err)
 			}
